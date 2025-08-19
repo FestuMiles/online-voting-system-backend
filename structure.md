@@ -21,7 +21,7 @@ This document describes the structure and purpose of the main components in the 
 
 ## Typical Source Structure
 
-> *Note: The following folders are commonly found in Node.js/Express/Mongoose projects. Adjust based on your actual directory structure.*
+> *Note: The following folders are commonly found in Node.js/Express/Mongoose projects. This is the actual directory structure we are using.*
 
 ```
 online-voting-system-backend/
