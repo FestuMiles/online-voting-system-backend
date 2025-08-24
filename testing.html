@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <form action="http://localhost:3000/reg/register" method="post">
+        <label for="firstName">First Name:</label>
+        <input type="text" id="firstName" name="firstName" placeholder="Enter first name">
+
+        <label for="lastName">Last Name:</label>
+        <input type="text" id="lastName" name="lastName" placeholder="Enter last name">
+
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" placeholder="Enter email">
+
+        <label for="phone">Phone:</label>
+        <input type="tel" id="phone" name="phone" placeholder="Enter phone number">
+
+        <label for="dob">Date of Birth:</label>
+        <input type="date" id="dob" name="dob">
+
+        <label for="nationalId">National ID:</label>
+        <input type="text" id="nationalId" name="nationalId" placeholder="Enter national ID">
+
+        <label for="street">Street:</label>
+        <input type="text" id="street" name="street" placeholder="Enter street">
+
+        <label for="city">City:</label>
+        <input type="text" id="city" name="city" placeholder="Enter city">
+
+        <label for="state">State:</label>
+        <input type="text" id="state" name="state" placeholder="Enter state">
+
+        <label for="zip">Zip Code:</label>
+        <input type="text" id="zip" name="zip" placeholder="Enter zip code">
+
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" placeholder="Enter password" minlength="6">
+
+        <label for="agreeTerms">
+            <input type="checkbox" id="agreeTerms" name="agreeTerms">
+            Agree to terms
+        </label>
+
+        <button type="submit">Submit</button>
+    </form>
+
+
+
+    <!-- the login form -->
+    <form action="http://localhost:3000/reg/login" method="post">
+        <label for="loginEmail">Email:</label>
+        <input type="email" id="loginEmail" name="email" placeholder="Enter email">
+
+        <label for="loginPassword">Password:</label>
+        <input type="password" id="loginPassword" name="password" placeholder="Enter password">
+
+        <button type="submit">Login</button>
+</body>
+</html>
