@@ -20,6 +20,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // SESSION SETUP
+
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
