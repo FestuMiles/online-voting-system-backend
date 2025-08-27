@@ -7,14 +7,26 @@ const electionSchema = new mongoose.Schema(
         description: String,
         startDate: Date,
         endDate: Date,
+        positions: [{
+            positionName: {type: String, unique: true}, 
+            seats: Number, 
+            description: String
+        }],
         status: { type: String, enum: ["upcoming", "ongoing", "completed"] },
         candidates: [{
             _id: ObjectId,
             party: String,
-            manifesto: String
+            manifesto: String,
+            poster: String,
+            position: String,
+            approaved: { type: Boolean, default: false }
         }], // refs to Users who are candidates
-        votes: [ObjectId],     // refs to Users who are voters
+        votes: [{
+            voterId: ObjectId, //Hashed Id
+            candidateId: ObjectId
+        }],     // refs to Users who are voters
         createdAt: Date,
         updatedAt: Date
     }
 )
+
