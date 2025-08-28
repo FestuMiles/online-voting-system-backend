@@ -1,4 +1,4 @@
-import Registration from '../models/registration.js';
+import User from '../models/user.js';
 import bcrypt from 'bcrypt';
 
 // Controller function to handle user registration
@@ -10,12 +10,10 @@ export const registerUser = async (req, res) => {
             lastName,
             email,
             phone,
-            dob,
-            nationalId,
-            street,
-            city,
-            state,
-            zip,
+            studentId,
+            school,
+            yearOfStudy,
+            department,
             password,
             agreeTerms
         } = req.body;
@@ -26,7 +24,7 @@ export const registerUser = async (req, res) => {
         }
 
         // Check if user already exists
-        const existingUser = await Registration.findOne({ email });
+        const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ message: 'User with this email already exists.' });
         }
@@ -39,19 +37,18 @@ export const registerUser = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Create new user
-        const newUser = new Registration({
+        const newUser = new User({
             firstName,
             lastName,
             email,
             phone,
-            dob,
-            nationalId,
-            street,
-            city,
-            state,
-            zip,
+            studentId,
+            school,
+            yearOfStudy,
+            department,
             password: hashedPassword,
-            agreeTerms: (agreeTerms === 'on' || agreeTerms === true)
+            agreeTerms: (agreeTerms === 'on' || agreeTerms === true),
+            isAdmin: false
         });
 
         // Save user to database
@@ -76,7 +73,7 @@ export const loginUser = async (req, res) => {
         }
 
         // Check if user exists
-        const user = await Registration.findOne({ email });
+        const user = await User.findOne({ email });
         if (!user) {
             return res.status(400).json({ message: 'Invalid email or password.' });
         }
@@ -93,10 +90,11 @@ export const loginUser = async (req, res) => {
         req.session.firstName = user.firstName;
         req.session.lastName = user.lastName;
         req.session.isLoggedIn = true;
+        req.session.isAdmin = user.isAdmin;
 
 
         // Successful login
-        res.status(200).json({ message: 'Login successful.', user: { id: user._id, email: user.email, firstName: user.firstName, lastName: user.lastName } });
+        res.status(200).json({ message: 'Login successful.', user: { id: user._id, email: user.email, firstName: user.firstName, lastName: user.lastName, isAdmin: user.isAdmin } });
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ message: 'Server error. Please try again later.' });

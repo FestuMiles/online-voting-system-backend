@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const registrationSchema = new mongoose.Schema({
+const userSchema = new mongoose.Schema({
     firstName: { type: String, default: '' },
     lastName: { type: String, default: '' },
     email: { type: String, default: '', unique: true },
@@ -14,4 +14,4 @@ const registrationSchema = new mongoose.Schema({
     isAdmin: { type: Boolean, default: false }
 }, { timestamps: true });
 
-export default mongoose.model("Registration", registrationSchema);
+export default mongoose.model("User", userSchema);

@@ -5,6 +5,7 @@ import session from 'express-session';
 import cors from 'cors';
 import MongoStore from 'connect-mongo';
 import registrationRoutes from './src/routes/registration.js';
+import userRoutes from './src/routes/users.js';
 
 dotenv.config();
 
@@ -38,6 +39,8 @@ app.use(session({
 
 // Routes
 app.use('/reg', registrationRoutes);
+app.use('/admin/users', userRoutes);
+
 
 app.get('/', (req, res) => {
     res.send('Server is running');
