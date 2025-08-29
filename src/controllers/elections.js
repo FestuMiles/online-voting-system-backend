@@ -20,7 +20,10 @@ export const getAllElections = async (req, res) => {
 export const getElectionById = async (req, res) => {
   try {
     const { id } = req.params;
-    const election = await Election.findById(id);
+    const election = await Election.findById(id).populate(
+      "candidates.userId",
+      "firstName lastName email"
+    );
 
     if (!election) {
       return res.status(404).json({ message: "Election not found" });
