@@ -6,6 +6,10 @@ import {
   getCandidatesForPosition,
   submitVote,
   createElection,
+  editElection,
+  getNumOfActiveElections,
+  getNumOfUpcomingElections,
+  getNumOfCompletedElections
 } from "../controllers/elections.js";
 import { isLoggedIn, isAdmin } from "../middlewares/authentication.js";
 
@@ -16,11 +20,15 @@ router.get("/", getAllElections);
 router.get("/:id", getElectionById);
 router.get("/:id/positions", getElectionPositions);
 router.get("/:id/positions/:positionId/candidates", getCandidatesForPosition);
+router.get("/stats/active", getNumOfActiveElections);
+router.get("/stats/upcoming", getNumOfUpcomingElections);
+router.get("/stats/completed", getNumOfCompletedElections);
 
 // Protected routes (authentication required)
 router.post("/:id/positions/:positionId/vote", isLoggedIn, submitVote);
 
 // Admin routes (admin authentication required)
-router.post("/", isAdmin, createElection);
+router.post("/createElection", isAdmin, createElection);
+router.put("/:id/editElection", isAdmin, editElection);
 
 export default router;

@@ -217,3 +217,91 @@ export const createElection = async (req, res) => {
     res.status(500).json({ message: "Failed to create election" });
   }
 };
+
+
+//Function for editing election 
+export const editElection = async (req, res) => {
+  try {
+
+    const { id } = req.params;
+    const { title, description, startDate, endDate, positions, status } = req.body;
+
+    // Find the election to update
+    const election = await Election.findById(id);
+    if (!election) {
+      return res.status(404).json({ message: "Election not found" });
+    }
+
+    // Update fields if provided
+    if (title) election.title = title;
+    if (description) election.description = description;
+    if (startDate) election.startDate = startDate;
+    if (endDate) election.endDate = endDate;
+    if (positions) election.positions = positions;
+    if (status && ["upcoming", "ongoing", "completed"].includes(status)) {
+      election.status = status;
+    }
+
+    await election.save();
+
+    res.status(200).json({
+      message: "Election updated successfully",
+      election,
+    });
+  } catch (error) {
+    console.error("Error updating election:", error);
+    res.status(500).json({ message: "Failed to update election" });
+  }
+}
+
+export const getNumOfActiveElections = async (req, res) => {
+  try {
+    const count = await Election.countDocuments({ status: "ongoing" });
+    console.log("Number of active elections:", count);
+    res.status(200).json({ count });
+  } catch (error) {
+    console.error("Error fetching active elections count:", error);
+    res.status(500).json({ message: "Failed to fetch active elections count" });
+  }
+};
+
+export const getNumOfUpcomingElections = async (req, res) => {
+  try {
+    const count = await Election.countDocuments({ status: "upcoming" });
+    console.log("Upcoming elections count:", count);
+    res.status(200).json({ count });
+  } catch (error) {
+    console.error("Error fetching upcoming elections count:", error);
+    res.status(500).json({ message: "Failed to fetch upcoming elections count" });
+  }
+};
+export const getNumOfCompletedElections = async (req, res) => {
+  try {
+    const count = await Election.countDocuments({ status: "completed" });
+    console.log("Completed elections count:", count);
+    res.status(200).json({ count });
+  } catch (error) {
+    console.error("Error fetching completed elections count:", error);
+    res.status(500).json({ message: "Failed to fetch completed elections count" });
+  }
+};
+
+// Delete an election (Admin only)
+export const deleteElection = async (req, res) => {
+  try {
+    // Check if user is admin
+    if (!req.session.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    const { id } = req.params;
+
+    const deletedElection = await Election.findByIdAndDelete(id);
+    if (!deletedElection) {
+      return res.status(404).json({ message: "Election not found" });
+    }
+    res.status(200).json({ message: "Election deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting election:", error);
+    res.status(500).json({ message: "Failed to delete election" });
+  }
+};

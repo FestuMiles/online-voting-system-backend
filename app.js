@@ -4,9 +4,10 @@ import dotenv from "dotenv";
 import session from "express-session";
 import cors from "cors";
 import MongoStore from "connect-mongo";
-import registrationRoutes from "./src/routes/registration.js";
+import authRoutes from "./src/routes/auth.js";
 import userRoutes from "./src/routes/users.js";
 import electionRoutes from "./src/routes/elections.js";
+import settingsRoutes from "./src/routes/admin.js";
 import { createSampleElections } from "./src/utils/sampleData.js";
 
 dotenv.config();
@@ -44,9 +45,10 @@ app.use(
 );
 
 // Routes
-app.use("/reg", registrationRoutes);
+app.use("/reg", authRoutes);
 app.use("/admin/users", userRoutes);
 app.use("/api/elections", electionRoutes);
+app.use("/admin", settingsRoutes);
 
 app.get("/", (req, res) => {
   res.send("Server is running");

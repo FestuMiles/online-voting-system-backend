@@ -100,3 +100,16 @@ export const loginUser = async (req, res) => {
         res.status(500).json({ message: 'Server error. Please try again later.' });
     }
 }
+
+
+export const logoutUser = (req, res) => {
+    req.session.destroy(err => {
+        if (err) {
+            console.error('Logout error:', err);
+            return res.status(500).json({ message: 'Server error. Please try again later.' });
+        }
+        res.clearCookie('connect.sid'); // Clear the session cookie
+        res.status(200).json({ message: 'Logout successful.' });
+    });
+};
+
