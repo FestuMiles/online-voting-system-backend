@@ -305,3 +305,102 @@ export const deleteElection = async (req, res) => {
     res.status(500).json({ message: "Failed to delete election" });
   }
 };
+
+// Apply to stand as a candidate for a position in an election
+export const applyForPosition = async (req, res) => {
+  try {
+    const { id } = req.params; // election id
+    const { fullName, email, position, manifesto } = req.body;
+
+    if (!fullName || !email || !position || !manifesto) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const election = await Election.findById(id);
+    if (!election) {
+      return res.status(404).json({ message: "Election not found" });
+    }
+
+    // Ensure position exists in election
+    const positionExists = election.positions.some(
+      (p) => p.positionName === position
+    );
+    if (!positionExists) {
+      return res.status(404).json({ message: "Position not found in election" });
+    }
+
+    // Create or find a user record by email (simple upsert-like behavior)
+    let user = await User.findOne({ email });
+    if (!user) {
+      const [firstName, ...rest] = fullName.split(" ");
+      const lastName = rest.join(" ") || "";
+      user = new User({ firstName, lastName, email });
+      await user.save();
+    }
+
+    // Prevent duplicate applications for same user and position
+    const alreadyApplied = election.candidates.some(
+      (c) => c.position === position && c.userId.toString() === user._id.toString()
+    );
+    if (alreadyApplied) {
+      return res.status(409).json({ message: "You have already applied for this position" });
+    }
+
+    // Append candidate (unapproved by default)
+    election.candidates.push({
+      userId: user._id,
+      party: "",
+      manifesto,
+      poster: "",
+      position,
+      approved: false,
+    });
+
+    await election.save();
+
+    return res.status(201).json({ message: "Application submitted successfully" });
+  } catch (error) {
+    console.error("Error applying for position:", error);
+    return res.status(500).json({ message: "Failed to submit application" });
+  }
+};
+
+// Get application status by election and applicant email
+export const getApplicationStatus = async (req, res) => {
+  try {
+    const { id } = req.params; // election id
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const election = await Election.findById(id);
+    if (!election) {
+      return res.status(404).json({ message: "Election not found" });
+    }
+
+    const user = await User.findOne({ email }).select('_id firstName lastName email');
+    if (!user) {
+      return res.status(200).json({ status: 'not_found' });
+    }
+
+    const candidate = election.candidates.find((c) => c.userId.toString() === user._id.toString());
+    if (!candidate) {
+      return res.status(200).json({ status: 'not_found' });
+    }
+
+    return res.status(200).json({
+      status: candidate.approved ? 'accepted' : 'pending',
+      details: {
+        fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+        email: user.email,
+        position: candidate.position,
+        manifesto: candidate.manifesto,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching application status:', error);
+    return res.status(500).json({ message: 'Failed to fetch application status' });
+  }
+};
