@@ -305,3 +305,86 @@ export const deleteElection = async (req, res) => {
     res.status(500).json({ message: "Failed to delete election" });
   }
 };
+
+
+
+
+/**
+ * Add a new position to an election
+ */
+export const addPositionToElection = async (req, res) => {
+  try {
+    const { electionId } = req.params;
+    const { positionName, seats, description } = req.body;
+    console.log("Request body:", req.body);
+    console.log("Election ID:", electionId);
+
+    // Validate input
+    if (!positionName || !seats || !description) {
+      return res.status(400).json({ message: "All fields are required (positionName, seats, description)." });
+    }
+
+    // Find election
+    const election = await Election.findById(electionId);
+    if (!election) {
+      return res.status(404).json({ message: "Election not found." });
+    }
+
+    // Prevent duplicate positions
+    const positionExists = election.positions.some(
+      (pos) => pos.positionName.toLowerCase() === positionName.toLowerCase()
+    );
+    if (positionExists) {
+      return res.status(400).json({ message: "Position already exists in this election." });
+    }
+
+    // Add position
+    election.positions.push({ positionName, seats, description });
+    await election.save();
+
+    res.status(201).json({ message: "Position added successfully.", election });
+  } catch (error) {
+    console.error("Error adding position:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+/**
+ * Remove a position from an election
+ */
+/**
+ * Remove a position from an election by positionName
+ */
+export const removePositionFromElection = async (req, res) => {
+  try {
+    const { electionId, positionName } = req.params;
+
+    if (!positionName) {
+      return res.status(400).json({ message: "Position name is required." });
+    }
+
+    // Find election
+    const election = await Election.findById(electionId);
+    if (!election) {
+      return res.status(404).json({ message: "Election not found." });
+    }
+
+    // Check if position exists
+    const positionIndex = election.positions.findIndex(
+      (pos) => pos.positionName.toLowerCase() === positionName.toLowerCase()
+    );
+
+    if (positionIndex === -1) {
+      return res.status(404).json({ message: "Position not found in this election." });
+    }
+
+    // Remove position
+    election.positions.splice(positionIndex, 1);
+    await election.save();
+
+    res.status(200).json({ message: "Position removed successfully.", election });
+  } catch (error) {
+    console.error("Error removing position:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};

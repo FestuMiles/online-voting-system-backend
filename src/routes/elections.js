@@ -9,7 +9,9 @@ import {
   editElection,
   getNumOfActiveElections,
   getNumOfUpcomingElections,
-  getNumOfCompletedElections
+  getNumOfCompletedElections,
+  addPositionToElection,
+  removePositionFromElection
 } from "../controllers/elections.js";
 import { isLoggedIn, isAdmin } from "../middlewares/authentication.js";
 
@@ -30,5 +32,7 @@ router.post("/:id/positions/:positionId/vote", isLoggedIn, submitVote);
 // Admin routes (admin authentication required)
 router.post("/createElection", isAdmin, createElection);
 router.put("/:id/editElection", isAdmin, editElection);
+router.patch("/:electionId/positions/add", isAdmin, addPositionToElection);
+router.patch("/:electionId/positions/:positionName/delete", isAdmin, removePositionFromElection);
 
 export default router;

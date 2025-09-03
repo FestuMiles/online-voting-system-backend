@@ -6,6 +6,7 @@ import cors from "cors";
 import MongoStore from "connect-mongo";
 import authRoutes from "./src/routes/auth.js";
 import userRoutes from "./src/routes/users.js";
+import candidateRoutes from "./src/routes/candidate.js";
 import electionRoutes from "./src/routes/elections.js";
 import settingsRoutes from "./src/routes/admin.js";
 import { createSampleElections } from "./src/utils/sampleData.js";
@@ -49,6 +50,7 @@ app.use("/reg", authRoutes);
 app.use("/admin/users", userRoutes);
 app.use("/api/elections", electionRoutes);
 app.use("/admin", settingsRoutes);
+app.use("/candidates", candidateRoutes);
 
 app.get("/", (req, res) => {
   res.send("Server is running");
