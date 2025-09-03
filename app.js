@@ -47,6 +47,7 @@ app.use(
 // Routes
 app.use("/reg", authRoutes);
 app.use("/admin/users", userRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/elections", electionRoutes);
 app.use("/admin", settingsRoutes);
 
