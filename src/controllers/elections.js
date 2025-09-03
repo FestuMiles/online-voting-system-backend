@@ -387,7 +387,7 @@ export const applyForPosition = async (req, res) => {
   try {
     const { id } = req.params; // election id
     const { party, manifesto, position, fullName, email } = req.body;
-    let userId = req.user?.id; // From JWT middleware
+    let userId = req.session?.userId; // From session
 
     if (!party || !manifesto || !position) {
       return res.status(400).json({ message: "Party, manifesto, and position are required" });
@@ -465,7 +465,7 @@ export const applyForPosition = async (req, res) => {
 export const getApplicationStatus = async (req, res) => {
   try {
     const { id } = req.params; // election id
-    const userId = req.user?.id; // From JWT middleware
+    const userId = req.session?.userId; // From session
 
     if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
