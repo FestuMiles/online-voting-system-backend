@@ -1,12 +1,17 @@
 import { Router } from "express";
-import getAllUsers, {deleteUser, getTotalNumberOfUsers} from "../controllers/usersManagement.js";
+import getAllUsers, {
+  deleteUser,
+  getTotalNumberOfUsers,
+  getCurrentUser,
+} from "../controllers/usersManagement.js";
 import { isLoggedIn } from "../middlewares/authentication.js";
 import { isAdmin } from "../middlewares/authentication.js";
 const router = Router();
 // Route to get all users
-router.get('/all',isLoggedIn,isAdmin, getAllUsers);
-router.delete('/delete/:id',isLoggedIn,isAdmin, deleteUser);
-router.get('/total',isLoggedIn,isAdmin, getTotalNumberOfUsers);
+router.get("/all", isLoggedIn, isAdmin, getAllUsers);
+router.delete("/delete/:id", isLoggedIn, isAdmin, deleteUser);
+router.get("/total", isLoggedIn, isAdmin, getTotalNumberOfUsers);
+router.get("/me", isLoggedIn, getCurrentUser);
 
 export default router;
 // This route listens for GET requests at /all and calls the getAllUsers controller function
