@@ -386,15 +386,21 @@ export const removePositionFromElection = async (req, res) => {
 export const applyForPosition = async (req, res) => {
   try {
     const { id } = req.params; // election id
-    const { fullName, email, position, manifesto } = req.body;
+    const { party, manifesto, position, fullName, email } = req.body;
+    let userId = req.user?.id; // From JWT middleware
 
-    if (!fullName || !email || !position || !manifesto) {
-      return res.status(400).json({ message: "All fields are required" });
+    if (!party || !manifesto || !position) {
+      return res.status(400).json({ message: "Party, manifesto, and position are required" });
     }
 
     const election = await Election.findById(id);
     if (!election) {
       return res.status(404).json({ message: "Election not found" });
+    }
+
+    // Check if election allows applications (upcoming or ongoing)
+    if (election.status === "completed") {
+      return res.status(400).json({ message: "Cannot apply to completed elections" });
     }
 
     // Ensure position exists in election
@@ -405,29 +411,43 @@ export const applyForPosition = async (req, res) => {
       return res.status(404).json({ message: "Position not found in election" });
     }
 
-    // Create or find a user record by email (simple upsert-like behavior)
-    let user = await User.findOne({ email });
-    if (!user) {
-      const [firstName, ...rest] = fullName.split(" ");
-      const lastName = rest.join(" ") || "";
-      user = new User({ firstName, lastName, email });
-      await user.save();
+    // If no authenticated user, create a temporary user or use provided info
+    if (!userId) {
+      if (!fullName || !email) {
+        return res.status(400).json({ message: "Full name and email are required for guest applications" });
+      }
+      
+      // Find or create user
+      let user = await User.findOne({ email });
+      if (!user) {
+        const [firstName, ...rest] = fullName.split(" ");
+        const lastName = rest.join(" ") || "";
+        user = new User({ firstName, lastName, email });
+        await user.save();
+      }
+      userId = user._id;
     }
 
     // Prevent duplicate applications for same user and position
     const alreadyApplied = election.candidates.some(
-      (c) => c.position === position && c.userId.toString() === user._id.toString()
+      (c) => c.position === position && c.userId.toString() === userId.toString()
     );
     if (alreadyApplied) {
       return res.status(409).json({ message: "You have already applied for this position" });
     }
 
+    // Handle poster upload if present
+    let posterPath = "";
+    if (req.file) {
+      posterPath = req.file.path || req.file.filename;
+    }
+
     // Append candidate (unapproved by default)
     election.candidates.push({
-      userId: user._id,
-      party: "",
+      userId: userId,
+      party,
       manifesto,
-      poster: "",
+      poster: posterPath,
       position,
       approved: false,
     });
@@ -441,14 +461,14 @@ export const applyForPosition = async (req, res) => {
   }
 };
 
-// Get application status by election and applicant email
+// Get application status by election and user
 export const getApplicationStatus = async (req, res) => {
   try {
     const { id } = req.params; // election id
-    const { email } = req.query;
+    const userId = req.user?.id; // From JWT middleware
 
-    if (!email) {
-      return res.status(400).json({ message: "Email is required" });
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
     }
 
     const election = await Election.findById(id);
@@ -456,15 +476,12 @@ export const getApplicationStatus = async (req, res) => {
       return res.status(404).json({ message: "Election not found" });
     }
 
-    const user = await User.findOne({ email }).select('_id firstName lastName email');
-    if (!user) {
-      return res.status(200).json({ status: 'not_found' });
-    }
-
-    const candidate = election.candidates.find((c) => c.userId.toString() === user._id.toString());
+    const candidate = election.candidates.find((c) => c.userId.toString() === userId.toString());
     if (!candidate) {
       return res.status(200).json({ status: 'not_found' });
     }
+
+    const user = await User.findById(userId).select('firstName lastName email');
 
     return res.status(200).json({
       status: candidate.approved ? 'accepted' : 'pending',
@@ -472,7 +489,10 @@ export const getApplicationStatus = async (req, res) => {
         fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
         email: user.email,
         position: candidate.position,
+        party: candidate.party,
         manifesto: candidate.manifesto,
+        poster: candidate.poster,
+        applicationDate: candidate.createdAt || election.createdAt,
       },
     });
   } catch (error) {
