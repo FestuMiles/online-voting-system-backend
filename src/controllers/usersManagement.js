@@ -41,6 +41,69 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
+// Update current user's editable fields (email, phone)
+const updateCurrentUser = async (req, res) => {
+  try {
+    if (!req.session || !req.session.isLoggedIn || !req.session.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    const { email, phone } = req.body;
+    const updates = {};
+
+    if (typeof email === "string") {
+      const emailTrim = email.trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailTrim)) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
+      // Check uniqueness if email changed
+      const existing = await User.findOne({ email: emailTrim });
+      if (existing && String(existing._id) !== String(req.session.userId)) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+      updates.email = emailTrim;
+    }
+
+    if (typeof phone === "string") {
+      const phoneTrim = phone.trim();
+      // Basic phone validation (optional, len 7-20)
+      if (phoneTrim && (phoneTrim.length < 7 || phoneTrim.length > 20)) {
+        return res.status(400).json({ message: "Invalid phone number" });
+      }
+      updates.phone = phoneTrim;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ message: "No valid fields to update" });
+    }
+
+    const updated = await User.findByIdAndUpdate(
+      req.session.userId,
+      { $set: updates },
+      {
+        new: true,
+        runValidators: true,
+        select:
+          "firstName lastName email phone studentId school yearOfStudy department isAdmin createdAt",
+      }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Keep session email in sync if changed
+    if (updates.email) {
+      req.session.userEmail = updates.email;
+    }
+
+    return res.status(200).json({ message: "Profile updated", user: updated });
+  } catch (error) {
+    console.error("Update current user error:", error);
+    return res.status(500).json({ message: "Error updating user", error });
+  }
+};
 
 //Deleting a user
 const deleteUser = async (req, res) => {
@@ -58,7 +121,6 @@ const deleteUser = async (req, res) => {
   }
 };
 
-
 //Making a user an admin
 const makeUserAdmin = async (req, res) => {
   try {
@@ -72,7 +134,12 @@ const makeUserAdmin = async (req, res) => {
     if (!updatedUser) {
       return res.status(404).json({ message: "User not found" });
     }
-    res.status(200).json({ message: "User promoted to admin successfully", user: updatedUser });
+    res
+      .status(200)
+      .json({
+        message: "User promoted to admin successfully",
+        user: updatedUser,
+      });
   } catch (error) {
     console.log("Error promoting user to admin:", error);
     res.status(500).json({ message: "Error promoting user to admin", error });
@@ -89,14 +156,24 @@ const revokeAdminRights = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     if (userToRevoke.madeAdminBy?.toString() !== req.session.userId) {
-      return res.status(403).json({ message: "You do not have permission to revoke this user's admin rights" });
+      return res
+        .status(403)
+        .json({
+          message:
+            "You do not have permission to revoke this user's admin rights",
+        });
     }
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { isAdmin: false, madeAdminBy: null },  
+      { isAdmin: false, madeAdminBy: null },
       { new: true }
     );
-    res.status(200).json({ message: "Admin rights revoked successfully", user: updatedUser });
+    res
+      .status(200)
+      .json({
+        message: "Admin rights revoked successfully",
+        user: updatedUser,
+      });
   } catch (error) {
     console.log("Error revoking admin rights:", error);
     res.status(500).json({ message: "Error revoking admin rights", error });
@@ -105,4 +182,11 @@ const revokeAdminRights = async (req, res) => {
 
 // Exporting the controllers
 export default getAllUsers;
-export { deleteUser, getTotalNumberOfUsers, getCurrentUser, makeUserAdmin, revokeAdminRights };
+export {
+  deleteUser,
+  getTotalNumberOfUsers,
+  getCurrentUser,
+  updateCurrentUser,
+  makeUserAdmin,
+  revokeAdminRights,
+};
