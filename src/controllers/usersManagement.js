@@ -41,7 +41,6 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
-export default getAllUsers;
 
 //Deleting a user
 const deleteUser = async (req, res) => {
@@ -59,4 +58,51 @@ const deleteUser = async (req, res) => {
   }
 };
 
-export { deleteUser, getTotalNumberOfUsers, getCurrentUser };
+
+//Making a user an admin
+const makeUserAdmin = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    console.log("Making user admin with ID:", userId);
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { isAdmin: true, madeAdminBy: req.session.userId },
+      { new: true }
+    );
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(200).json({ message: "User promoted to admin successfully", user: updatedUser });
+  } catch (error) {
+    console.log("Error promoting user to admin:", error);
+    res.status(500).json({ message: "Error promoting user to admin", error });
+  }
+};
+
+// Revoking admin rights from a user by setting isAdmin to false and madeAdminBy to null - only the madeAdminBy user can revoke admin rights
+const revokeAdminRights = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    console.log("Revoking admin rights for user with ID:", userId);
+    const userToRevoke = await User.findById(userId);
+    if (!userToRevoke) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    if (userToRevoke.madeAdminBy?.toString() !== req.session.userId) {
+      return res.status(403).json({ message: "You do not have permission to revoke this user's admin rights" });
+    }
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { isAdmin: false, madeAdminBy: null },  
+      { new: true }
+    );
+    res.status(200).json({ message: "Admin rights revoked successfully", user: updatedUser });
+  } catch (error) {
+    console.log("Error revoking admin rights:", error);
+    res.status(500).json({ message: "Error revoking admin rights", error });
+  }
+};
+
+// Exporting the controllers
+export default getAllUsers;
+export { deleteUser, getTotalNumberOfUsers, getCurrentUser, makeUserAdmin, revokeAdminRights };

@@ -9,6 +9,7 @@ import {
   submitVote,
   createElection,
   editElection,
+  deleteElection,
   getNumOfActiveElections,
   getNumOfUpcomingElections,
   getNumOfCompletedElections,
@@ -69,5 +70,6 @@ router.post("/createElection", isAdmin, createElection);
 router.put("/:id/editElection", isAdmin, editElection);
 router.patch("/:electionId/positions/add", isAdmin, addPositionToElection);
 router.patch("/:electionId/positions/:positionName/delete", isAdmin, removePositionFromElection);
+router.delete("/:id/deleteElection", isAdmin, deleteElection);
 
 export default router;

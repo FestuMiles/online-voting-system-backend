@@ -1,5 +1,5 @@
 import Election from "../models/election.js";
-import jwt from "jsonwebtoken";
+// import jwt from "jsonwebtoken";
 import User from "../models/user.js";
 
 export async function isLoggedIn(req, res, next) {

@@ -12,6 +12,7 @@ const userSchema = new mongoose.Schema({
     password: { type: String, default: '', minlength: 6 },
     agreeTerms: { type: Boolean, default: false },
     isAdmin: { type: Boolean, default: false },
+    madeAdminBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     candidateElections: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Election' }],
 }, { timestamps: true });
 

@@ -3,6 +3,8 @@ import getAllUsers, {
   deleteUser,
   getTotalNumberOfUsers,
   getCurrentUser,
+  makeUserAdmin,
+  revokeAdminRights,
 } from "../controllers/usersManagement.js";
 import { isLoggedIn } from "../middlewares/authentication.js";
 import { isAdmin } from "../middlewares/authentication.js";
@@ -12,6 +14,8 @@ router.get("/all", isLoggedIn, isAdmin, getAllUsers);
 router.delete("/delete/:id", isLoggedIn, isAdmin, deleteUser);
 router.get("/total", isLoggedIn, isAdmin, getTotalNumberOfUsers);
 router.get("/me", isLoggedIn, getCurrentUser);
+router.patch("/make-admin/:id", isLoggedIn, isAdmin, makeUserAdmin);
+router.patch("/revoke-admin/:id", isLoggedIn, isAdmin, revokeAdminRights);
 
 export default router;
 // This route listens for GET requests at /all and calls the getAllUsers controller function

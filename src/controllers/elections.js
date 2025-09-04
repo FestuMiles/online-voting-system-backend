@@ -184,10 +184,10 @@ export const createElection = async (req, res) => {
       return res.status(403).json({ message: "Admin access required" });
     }
 
-    const { title, description, startDate, endDate, positions } = req.body;
+    const { title, description, startDate, endDate} = req.body;
 
     // Basic validation
-    if (!title || !description || !startDate || !endDate || !positions) {
+    if (!title || !description || !startDate || !endDate) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -197,12 +197,18 @@ export const createElection = async (req, res) => {
         .json({ message: "End date must be after start date" });
     }
 
+    //Checking if start date is in the past
+    if (new Date(startDate) < new Date()) {
+      return res
+        .status(400)
+        .json({ message: "Start date must be in the future" });
+    }
+
     const newElection = new Election({
       title,
       description,
       startDate,
       endDate,
-      positions,
       status: "upcoming",
     });
 
@@ -294,6 +300,7 @@ export const deleteElection = async (req, res) => {
       return res.status(403).json({ message: "Admin access required" });
     }
     const { id } = req.params;
+    console.log("Deleting election with ID:", id);
 
     const deletedElection = await Election.findByIdAndDelete(id);
     if (!deletedElection) {
