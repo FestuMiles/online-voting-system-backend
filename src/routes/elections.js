@@ -14,7 +14,10 @@ import {
   getNumOfUpcomingElections,
   getNumOfCompletedElections,
   addPositionToElection,
-  removePositionFromElection
+  removePositionFromElection,
+  editPositionInElection,
+  getElectionCandidates,
+  toggleCandidateApproval
 } from "../controllers/elections.js";
 import { applyForPosition, getApplicationStatus } from "../controllers/elections.js";
 import { isLoggedIn, isAdmin } from "../middlewares/authentication.js";
@@ -67,9 +70,12 @@ router.get("/:id/application-status", isLoggedIn, getApplicationStatus);
 
 // Admin routes (admin authentication required)
 router.post("/createElection", isAdmin, createElection);
-router.put("/:id/editElection", isAdmin, editElection);
+router.patch("/:id/editElection", isAdmin, editElection);
 router.patch("/:electionId/positions/add", isAdmin, addPositionToElection);
+router.patch("/:electionId/positions/:positionName/edit", isAdmin, editPositionInElection);
+router.get("/:electionId/candidates", isAdmin, getElectionCandidates);
 router.patch("/:electionId/positions/:positionName/delete", isAdmin, removePositionFromElection);
 router.delete("/:id/deleteElection", isAdmin, deleteElection);
+router.patch("/:electionId/candidates/:candidateId/toggleApproval", isAdmin, toggleCandidateApproval);
 
 export default router;

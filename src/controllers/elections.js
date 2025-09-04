@@ -184,7 +184,7 @@ export const createElection = async (req, res) => {
       return res.status(403).json({ message: "Admin access required" });
     }
 
-    const { title, description, startDate, endDate} = req.body;
+    const { title, description, startDate, endDate } = req.body;
 
     // Basic validation
     if (!title || !description || !startDate || !endDate) {
@@ -352,6 +352,46 @@ export const addPositionToElection = async (req, res) => {
     res.status(500).json({ message: "Internal server error." });
   }
 };
+
+//Editing a position within an election - admin only
+export const editPositionInElection = async (req, res) => {
+  try {
+    const { electionId, positionName } = req.params;
+    const { newPositionName, seats, description } = req.body;
+    console.log("Request body:", req.body);
+    console.log("Election ID:", electionId);
+    console.log("Position Name:", positionName);
+    // Validate input
+    if (!newPositionName && !seats && !description) {
+      return res.status(400).json({ message: "At least one field (newPositionName, seats, description) is required to update." });
+    }
+    // Find election
+    const election = await Election.findById(electionId);
+    if (!election) {
+      return res.status(404).json({ message: "Election not found." });
+    }
+    // Find the position to edit
+    const position = election.positions.find(
+      (pos) => pos.positionName.trim().toLowerCase() === positionName.trim().toLowerCase()
+    );
+
+    if (!position) {
+      return res.status(404).json({ message: "Position not found in this election." });
+    }
+    // Update fields if provided
+    if (newPositionName) position.positionName = newPositionName;
+    if (seats) position.seats = seats;
+    if (description) position.description = description;
+    await election.save();
+    res.status(200).json({ message: "Position updated successfully.", election });
+  } catch (error) {
+    console.error("Error editing position:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+
+
 /**
  * Remove a position from an election by positionName
  */
@@ -423,7 +463,7 @@ export const applyForPosition = async (req, res) => {
       if (!fullName || !email) {
         return res.status(400).json({ message: "Full name and email are required for guest applications" });
       }
-      
+
       // Find or create user
       let user = await User.findOne({ email });
       if (!user) {
@@ -508,3 +548,44 @@ export const getApplicationStatus = async (req, res) => {
   }
 };
 
+//Fetching candidate of an election by user ids
+export const getElectionCandidates = async (req, res) => {
+  try {
+    const electionId = req.params.electionId;
+    const election = await Election.findById(electionId).populate(
+      "candidates.userId",
+      "firstName lastName email"
+    );
+    if (!election) {
+      return res.status(404).json({ message: "Election not found" });
+    }
+    console.log("Election candidates:", election.candidates);
+    res.status(200).json(election.candidates);
+  }
+  catch (error) {
+    console.error("Error fetching election candidates:", error);
+    res.status(500).json({ message: "Failed to fetch election candidates" });
+  }
+
+};
+
+//Toggle candidate approval status - admin only
+export const toggleCandidateApproval = async (req, res) => {
+  try {
+    const { electionId, candidateId } = req.params;
+    const election = await Election.findById(electionId);
+    if (!election) {
+      return res.status(404).json({ message: "Election not found" });
+    }
+    const candidate = election.candidates.id(candidateId);
+    if (!candidate) {
+      return res.status(404).json({ message: "Candidate not found" });
+    }
+    candidate.approved = !candidate.approved;
+    await election.save();
+    res.status(200).json({ message: `Candidate ${candidate.approved ? 'approved' : 'disapproved'} successfully`, candidate });
+  } catch (error) {
+    console.error("Error toggling candidate approval:", error);
+    res.status(500).json({ message: "Failed to toggle candidate approval" });
+  } 
+};
