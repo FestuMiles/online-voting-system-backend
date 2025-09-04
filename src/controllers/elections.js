@@ -6,7 +6,9 @@ import crypto from "crypto";
 export const getAllElections = async (req, res) => {
   try {
     const elections = await Election.find({})
-      .select("title description startDate endDate status positions candidates")
+      .select(
+        "title description startDate endDate status positions candidates votes"
+      )
       .sort({ startDate: -1 });
 
     res.status(200).json(elections);
@@ -184,10 +186,10 @@ export const createElection = async (req, res) => {
       return res.status(403).json({ message: "Admin access required" });
     }
 
-    const { title, description, startDate, endDate} = req.body;
+    const { title, description, startDate, endDate, positions } = req.body;
 
     // Basic validation
-    if (!title || !description || !startDate || !endDate) {
+    if (!title || !description || !startDate || !endDate || !positions) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -197,18 +199,12 @@ export const createElection = async (req, res) => {
         .json({ message: "End date must be after start date" });
     }
 
-    //Checking if start date is in the past
-    if (new Date(startDate) < new Date()) {
-      return res
-        .status(400)
-        .json({ message: "Start date must be in the future" });
-    }
-
     const newElection = new Election({
       title,
       description,
       startDate,
       endDate,
+      positions,
       status: "upcoming",
     });
 
@@ -224,13 +220,12 @@ export const createElection = async (req, res) => {
   }
 };
 
-
-//Function for editing election 
+//Function for editing election
 export const editElection = async (req, res) => {
   try {
-
     const { id } = req.params;
-    const { title, description, startDate, endDate, positions, status } = req.body;
+    const { title, description, startDate, endDate, positions, status } =
+      req.body;
 
     // Find the election to update
     const election = await Election.findById(id);
@@ -258,7 +253,7 @@ export const editElection = async (req, res) => {
     console.error("Error updating election:", error);
     res.status(500).json({ message: "Failed to update election" });
   }
-}
+};
 
 export const getNumOfActiveElections = async (req, res) => {
   try {
@@ -278,7 +273,9 @@ export const getNumOfUpcomingElections = async (req, res) => {
     res.status(200).json({ count });
   } catch (error) {
     console.error("Error fetching upcoming elections count:", error);
-    res.status(500).json({ message: "Failed to fetch upcoming elections count" });
+    res
+      .status(500)
+      .json({ message: "Failed to fetch upcoming elections count" });
   }
 };
 export const getNumOfCompletedElections = async (req, res) => {
@@ -288,7 +285,9 @@ export const getNumOfCompletedElections = async (req, res) => {
     res.status(200).json({ count });
   } catch (error) {
     console.error("Error fetching completed elections count:", error);
-    res.status(500).json({ message: "Failed to fetch completed elections count" });
+    res
+      .status(500)
+      .json({ message: "Failed to fetch completed elections count" });
   }
 };
 
@@ -325,7 +324,9 @@ export const addPositionToElection = async (req, res) => {
 
     // Validate input
     if (!positionName || !seats || !description) {
-      return res.status(400).json({ message: "All fields are required (positionName, seats, description)." });
+      return res.status(400).json({
+        message: "All fields are required (positionName, seats, description).",
+      });
     }
 
     // Find election
@@ -339,7 +340,9 @@ export const addPositionToElection = async (req, res) => {
       (pos) => pos.positionName.toLowerCase() === positionName.toLowerCase()
     );
     if (positionExists) {
-      return res.status(400).json({ message: "Position already exists in this election." });
+      return res
+        .status(400)
+        .json({ message: "Position already exists in this election." });
     }
 
     // Add position
@@ -375,14 +378,18 @@ export const removePositionFromElection = async (req, res) => {
     );
 
     if (positionIndex === -1) {
-      return res.status(404).json({ message: "Position not found in this election." });
+      return res
+        .status(404)
+        .json({ message: "Position not found in this election." });
     }
 
     // Remove position
     election.positions.splice(positionIndex, 1);
     await election.save();
 
-    res.status(200).json({ message: "Position removed successfully.", election });
+    res
+      .status(200)
+      .json({ message: "Position removed successfully.", election });
   } catch (error) {
     console.error("Error removing position:", error);
     res.status(500).json({ message: "Internal server error." });
@@ -397,7 +404,9 @@ export const applyForPosition = async (req, res) => {
     let userId = req.session?.userId; // From session
 
     if (!party || !manifesto || !position) {
-      return res.status(400).json({ message: "Party, manifesto, and position are required" });
+      return res
+        .status(400)
+        .json({ message: "Party, manifesto, and position are required" });
     }
 
     const election = await Election.findById(id);
@@ -407,7 +416,9 @@ export const applyForPosition = async (req, res) => {
 
     // Check if election allows applications (upcoming or ongoing)
     if (election.status === "completed") {
-      return res.status(400).json({ message: "Cannot apply to completed elections" });
+      return res
+        .status(400)
+        .json({ message: "Cannot apply to completed elections" });
     }
 
     // Ensure position exists in election
@@ -415,15 +426,19 @@ export const applyForPosition = async (req, res) => {
       (p) => p.positionName === position
     );
     if (!positionExists) {
-      return res.status(404).json({ message: "Position not found in election" });
+      return res
+        .status(404)
+        .json({ message: "Position not found in election" });
     }
 
     // If no authenticated user, create a temporary user or use provided info
     if (!userId) {
       if (!fullName || !email) {
-        return res.status(400).json({ message: "Full name and email are required for guest applications" });
+        return res.status(400).json({
+          message: "Full name and email are required for guest applications",
+        });
       }
-      
+
       // Find or create user
       let user = await User.findOne({ email });
       if (!user) {
@@ -437,10 +452,13 @@ export const applyForPosition = async (req, res) => {
 
     // Prevent duplicate applications for same user and position
     const alreadyApplied = election.candidates.some(
-      (c) => c.position === position && c.userId.toString() === userId.toString()
+      (c) =>
+        c.position === position && c.userId.toString() === userId.toString()
     );
     if (alreadyApplied) {
-      return res.status(409).json({ message: "You have already applied for this position" });
+      return res
+        .status(409)
+        .json({ message: "You have already applied for this position" });
     }
 
     // Handle poster upload if present
@@ -461,7 +479,9 @@ export const applyForPosition = async (req, res) => {
 
     await election.save();
 
-    return res.status(201).json({ message: "Application submitted successfully" });
+    return res
+      .status(201)
+      .json({ message: "Application submitted successfully" });
   } catch (error) {
     console.error("Error applying for position:", error);
     return res.status(500).json({ message: "Failed to submit application" });
@@ -483,17 +503,19 @@ export const getApplicationStatus = async (req, res) => {
       return res.status(404).json({ message: "Election not found" });
     }
 
-    const candidate = election.candidates.find((c) => c.userId.toString() === userId.toString());
+    const candidate = election.candidates.find(
+      (c) => c.userId.toString() === userId.toString()
+    );
     if (!candidate) {
-      return res.status(200).json({ status: 'not_found' });
+      return res.status(200).json({ status: "not_found" });
     }
 
-    const user = await User.findById(userId).select('firstName lastName email');
+    const user = await User.findById(userId).select("firstName lastName email");
 
     return res.status(200).json({
-      status: candidate.approved ? 'accepted' : 'pending',
+      status: candidate.approved ? "accepted" : "pending",
       details: {
-        fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+        fullName: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
         email: user.email,
         position: candidate.position,
         party: candidate.party,
@@ -503,8 +525,9 @@ export const getApplicationStatus = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching application status:', error);
-    return res.status(500).json({ message: 'Failed to fetch application status' });
+    console.error("Error fetching application status:", error);
+    return res
+      .status(500)
+      .json({ message: "Failed to fetch application status" });
   }
 };
-
