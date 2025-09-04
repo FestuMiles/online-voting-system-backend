@@ -16,4 +16,7 @@ const userSchema = new mongoose.Schema({
     candidateElections: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Election' }],
 }, { timestamps: true });
 
-export default mongoose.model("User", userSchema);
+// Check if the model already exists before compiling it
+const User = mongoose.models.User || mongoose.model("User", userSchema);
+
+export default User;
