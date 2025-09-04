@@ -1,3 +1,4 @@
+import session from "express-session";
 import User from "../models/user.js";
 
 // Controller to retrieve all users
@@ -180,6 +181,29 @@ const revokeAdminRights = async (req, res) => {
   }
 };
 
+//Checking if a user is involved in any election as a candidate
+const isUserCandidateInAnyElection = async (req, res) => {
+  console.log("Checking if user is a candidate in any election");
+  try {
+    const userId = req.session.userId; // adjust depending on auth system
+    console.log("Session userId:", userId);
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized: user not logged in." });
+    }
+
+    console.log("Checking if user is a candidate with ID:", userId);
+    const user = await User.findById(userId).populate("candidateElections");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const isCandidate = user.candidateElections && user.candidateElections.length > 0;
+    res.status(200).json({ isCandidate, elections: user.candidateElections });
+  } catch (error) {
+    console.log("Error checking if user is a candidate:", error);
+    res.status(500).json({ message: "Error checking candidate status", error });
+  }
+ }
+
 // Exporting the controllers
 export default getAllUsers;
 export {
@@ -189,4 +213,5 @@ export {
   updateCurrentUser,
   makeUserAdmin,
   revokeAdminRights,
+  isUserCandidateInAnyElection
 };

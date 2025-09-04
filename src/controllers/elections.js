@@ -593,23 +593,50 @@ export const getElectionCandidates = async (req, res) => {
 
 };
 
-//Toggle candidate approval status - admin only
+// Toggle candidate approval status - admin only
+
 export const toggleCandidateApproval = async (req, res) => {
   try {
     const { electionId, candidateId } = req.params;
+
     const election = await Election.findById(electionId);
     if (!election) {
       return res.status(404).json({ message: "Election not found" });
     }
+
     const candidate = election.candidates.id(candidateId);
     if (!candidate) {
       return res.status(404).json({ message: "Candidate not found" });
     }
+
+    // Toggle approval
     candidate.approved = !candidate.approved;
+
+    // Update user's candidateElections
+    const user = await User.findById(candidate.userId);
+    if (user) {
+      if (candidate.approved) {
+        // Add electionId if approved and not already in the array
+        if (!user.candidateElections.includes(election._id)) {
+          user.candidateElections.push(election._id);
+        }
+      } else {
+        // Remove electionId if disapproved
+        user.candidateElections = user.candidateElections.filter(
+          (id) => id.toString() !== election._id.toString()
+        );
+      }
+      await user.save();
+    }
+
     await election.save();
-    res.status(200).json({ message: `Candidate ${candidate.approved ? 'approved' : 'disapproved'} successfully`, candidate });
+
+    res.status(200).json({
+      message: `Candidate ${candidate.approved ? "approved" : "disapproved"} successfully`,
+      candidate,
+    });
   } catch (error) {
     console.error("Error toggling candidate approval:", error);
     res.status(500).json({ message: "Failed to toggle candidate approval" });
-  } 
+  }
 };

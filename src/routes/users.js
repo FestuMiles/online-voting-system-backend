@@ -5,7 +5,8 @@ import getAllUsers, {
   getCurrentUser,
   updateCurrentUser,
   revokeAdminRights,
-  makeUserAdmin  
+  makeUserAdmin,
+  isUserCandidateInAnyElection
 } from "../controllers/usersManagement.js";
 import { isLoggedIn } from "../middlewares/authentication.js";
 import { isAdmin } from "../middlewares/authentication.js";
@@ -16,6 +17,7 @@ router.delete("/delete/:id", isLoggedIn, isAdmin, deleteUser);
 router.get("/total", isLoggedIn, isAdmin, getTotalNumberOfUsers);
 router.get("/me", isLoggedIn, getCurrentUser);
 router.put("/me", isLoggedIn, updateCurrentUser);
+router.get("/is-candidate", isLoggedIn, isUserCandidateInAnyElection);
 
 router.patch("/make-admin/:id", isLoggedIn, isAdmin, makeUserAdmin);
 router.patch("/revoke-admin/:id", isLoggedIn, isAdmin, revokeAdminRights);
