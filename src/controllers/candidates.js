@@ -1,5 +1,6 @@
+import CandidateApplication from "../models/CandidateApplication.js";
 import Election from "../models/election.js";
-import User from "../models/User.js";
+import User from "../models/user.js";
 
 /**
  * Apply for a position in an election
@@ -7,8 +8,8 @@ import User from "../models/User.js";
 export const applyForPosition = async (req, res) => {
   try {
     const { electionId } = req.params;
-    const { positionName, party, manifesto, poster } = req.body;
-    const userId = req.session?.userId; // Or req.user.id depending on your auth setup
+    const { positionName, manifesto } = req.body;
+    const userId = req.session?.user.id;
 
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized: user not logged in." });
@@ -19,47 +20,29 @@ export const applyForPosition = async (req, res) => {
       return res.status(404).json({ message: "Election not found." });
     }
 
-    if (election.status !== "upcoming") {
-      return res.status(400).json({ message: "Applications are only allowed for upcoming elections." });
-    }
-
-    const positionExists = election.positions.some(
-      (pos) => pos.positionName.toLowerCase() === positionName.toLowerCase()
-    );
-    if (!positionExists) {
-      return res.status(400).json({ message: "Invalid position name." });
-    }
-
-    const alreadyApplied = election.candidates.some(
-      (c) => c.userId.toString() === userId.toString() && c.position.toLowerCase() === positionName.toLowerCase()
-    );
+    const alreadyApplied = await CandidateApplication.findOne({
+      user: userId,
+      election: electionId,
+      position: positionName,
+    });
     if (alreadyApplied) {
       return res.status(400).json({ message: "You have already applied for this position." });
     }
 
-    const newApplication = {
-      userId,
-      party,
-      manifesto,
-      poster: poster || "",
+    const newApplication = new CandidateApplication({
+      user: userId,
+      election: electionId,
       position: positionName,
-      approved: false,
-      applicationDate: new Date(),
-    };
-    election.candidates.push(newApplication);
-    await election.save();
+      manifesto: manifesto,
+      status: "Pending",
+    });
 
-    // Now, also update the user's applications
-    const user = await User.findById(userId);
-    if (user) {
-      user.applications.push({
-        electionId: election._id,
-        applicationId: newApplication._id,
-      });
-      await user.save();
-    }
+    await newApplication.save();
 
-    res.status(201).json({ message: "Application submitted successfully.", election });
+    res.status(201).json({
+      message: "Application submitted successfully.",
+      application: newApplication,
+    });
   } catch (error) {
     console.error("Error applying for position:", error);
     res.status(500).json({ message: "Internal server error." });
@@ -67,89 +50,100 @@ export const applyForPosition = async (req, res) => {
 };
 
 /**
- * Get dashboard data for a single active candidate application.
- * This endpoint is for the main dashboard view.
+ * Get all applications for the authenticated candidate.
+ */
+export const getMyApplications = async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized: user not logged in." });
+    }
+
+    const applications = await CandidateApplication.find({ user: userId })
+      .populate("election", "title description startDate endDate status")
+      .lean();
+
+    if (!applications || applications.length === 0) {
+      return res.status(200).json([]);
+    }
+
+    res.status(200).json(applications);
+  } catch (error) {
+    console.error("Error fetching applications:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+/**
+ * Get dashboard data for any candidate application status.
  */
 export const getCandidateDashboard = async (req, res) => {
   try {
-    const userId = req.user.id; // User ID from the authentication middleware
-
-    // Find the single active application for the user.
-    // We assume there's only one active/approved application at a time for the dashboard.
-    const user = await User.findById(userId).populate({
-      path: 'applications.applicationId',
-      model: 'Application',
-      populate: {
-        path: 'electionId',
-        model: 'Election',
-        select: 'title description startDate endDate status positions'
-      }
-    });
-
-    const activeApp = user.applications.find(app => app.applicationId && app.applicationId.status === 'approved');
-
-    if (!activeApp) {
-      return res.status(404).json({ message: "No approved application found for the dashboard." });
+    const userId = req.session.user.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized: user not logged in." });
     }
 
-    const application = activeApp.applicationId;
-    const election = application.electionId;
+    const myApplication = await CandidateApplication.findOne({
+      user: userId,
+    }).sort({ applicationDate: -1 });
 
-    // Fetch all candidates for the same position in the election
-    const candidatesInPosition = await Election.aggregate([
-      { $match: { _id: election._id } },
-      { $unwind: "$candidates" },
-      { $match: { "candidates.position": application.position, "candidates.status": "approved" } },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'candidates.candidateId',
-          foreignField: '_id',
-          as: 'candidateProfile'
-        }
-      },
-      { $unwind: "$candidateProfile" },
-      {
-        $project: {
-          _id: "$candidates._id",
-          firstName: "$candidateProfile.firstName",
-          lastName: "$candidateProfile.lastName",
-          votes: { $size: "$candidates.votes" }
-        }
-      }
-    ]);
+    if (!myApplication) {
+      return res.status(404).json({ message: "No candidate applications found." });
+    }
 
-    // Sort candidates by votes to determine rank
-    candidatesInPosition.sort((a, b) => b.votes - a.votes);
-    const rank = candidatesInPosition.findIndex(c => c._id.toString() === application._id.toString()) + 1;
+    if (myApplication.status !== "Approved") {
+      const electionDetails = await Election.findById(myApplication.election._id, 'title status');
+      return res.status(200).json({
+        candidate: {
+          totalVotes: 0,
+          rank: "N/A",
+          applicationStatus: myApplication.status,
+        },
+        competition: null,
+        election: {
+          title: electionDetails.title,
+          status: electionDetails.status,
+        },
+        message: `Your application is currently ${myApplication.status}. You will see full dashboard data once it's approved.`,
+      });
+    }
 
-    // Construct the competition data for the bar chart
+    const election = await Election.findById(myApplication.election._id);
+
+    const competingCandidates = await CandidateApplication.find({
+      election: election._id,
+      position: myApplication.position,
+      status: "Approved",
+    }).populate("user", "firstName lastName");
+
+    const myVotes = myApplication.votes.length;
+    competingCandidates.sort((a, b) => b.votes.length - a.votes.length);
+
+    const rank = competingCandidates.findIndex(c => c._id.toString() === myApplication._id.toString()) + 1;
+
     const competitionData = {
-      labels: candidatesInPosition.map(c => c._id.toString() === application._id.toString() ? 'You' : `${c.firstName} ${c.lastName}`),
-      datasets: [
-        {
-          label: "Votes",
-          data: candidatesInPosition.map(c => c.votes),
-          backgroundColor: candidatesInPosition.map(c => c._id.toString() === application._id.toString() ? '#0d6efd' : '#ffc107'),
-        }
-      ]
+      labels: competingCandidates.map(c => c.user.firstName + ' ' + c.user.lastName),
+      data: competingCandidates.map(c => c.votes.length),
+      backgroundColor: competingCandidates.map(c =>
+        c._id.toString() === myApplication._id.toString() ? '#0d6efd' : '#ffc107'
+      ),
     };
 
     const dashboardData = {
       candidate: {
-        totalVotes: application.votes.length,
+        totalVotes: myVotes,
         rank,
-        applicationStatus: application.status
+        applicationStatus: myApplication.status,
       },
       competition: competitionData,
       election: {
         title: election.title,
-        timeRemaining: "N/A", // This is complex to calculate in real-time on the backend; placeholder for now
+        status: election.status,
       },
     };
 
     res.status(200).json(dashboardData);
-
   } catch (err) {
     console.error("Dashboard error:", err);
     res.status(500).json({ message: "Server error. Please try again later." });
@@ -157,32 +151,15 @@ export const getCandidateDashboard = async (req, res) => {
 };
 
 /**
- * Get all applications for the authenticated candidate.
- * This endpoint is for the My Applications page.
+ * Check if a user is a candidate
  */
-export const getMyApplications = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const applications = await Application.find({ candidateId: userId }).populate('electionId', 'title description startDate endDate status');
-
-        if (!applications || applications.length === 0) {
-            return res.status(404).json({ message: "No applications found for this user." });
-        }
-
-        const formattedApplications = applications.map(app => ({
-            ...app.toObject(),
-            election: app.electionId,
-            candidate: {
-                // Assuming you have the user details from req.user
-                firstName: req.user.firstName,
-                lastName: req.user.lastName,
-                email: req.user.email,
-            }
-        }));
-
-        res.status(200).json(formattedApplications);
-    } catch (error) {
-        console.error("Error fetching applications:", error);
-        res.status(500).json({ message: "Internal server error." });
-    }
+export const isCandidate = async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const isCandidate = await CandidateApplication.findOne({ user: userId, status: "Approved" });
+    res.status(200).json({ isCandidate: !!isCandidate });
+  } catch (error) {
+    console.error("Error checking candidate status:", error);
+    res.status(500).json({ message: "Server error." });
+  }
 };

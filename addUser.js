@@ -31,7 +31,7 @@ const User = mongoose.model("User", userSchema);
 // 4. Register function
 const registerUser = async () => {
   try {
-    const plainPassword = "securePassword123";
+    const plainPassword = "12345678";
     const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
     const user = new User({
@@ -41,7 +41,7 @@ const registerUser = async () => {
       phone: "1234567890",
       studentId: "S123456",
       school: "Engineering",
-      yearOfStudy: "2",
+      yearOfStudy: "4",
       department: "Computer Science",
       password: hashedPassword,
       agreeTerms: true,
