@@ -8,6 +8,8 @@ import registrationRoutes from "./src/routes/registration.js";
 import userRoutes from "./src/routes/users.js";
 import electionRoutes from "./src/routes/elections.js";
 import { createSampleElections } from "./src/utils/sampleData.js";
+import notificationRoutes from "./src/routes/notifications.js";
+
 
 dotenv.config();
 
@@ -32,7 +34,7 @@ app.use(
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
-      mongoUrl: process.env.MONGO_URI,
+      mongoUrl: process.env.MONGO_URL,
       collectionName: "sessions",
     }),
     cookie: {
@@ -47,6 +49,7 @@ app.use(
 app.use("/reg", registrationRoutes);
 app.use("/admin/users", userRoutes);
 app.use("/api/elections", electionRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.get("/", (req, res) => {
   res.send("Server is running");
