@@ -180,6 +180,7 @@ export const submitVote = async (req, res) => {
 
 // Create new election (Admin only)
 export const createElection = async (req, res) => {
+  // console.log("Create election request body:", req.session);
   try {
     // Check if user is admin
     if (!req.session.isAdmin) {
